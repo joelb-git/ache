@@ -68,13 +68,24 @@ public class TargetStorage {
 
         if (config.isEnglishLanguageDetectionEnabled()) {
             // Only accept English language
-            if (this.langDetector.isEnglish(page) == false) {
+            if (this.langDetector.isLanguage(page, "en") == false) {
                 logger.info("Ignoring non-English page: " + page.getURL().toString());
                 return null;
             }
         }
 
-        try {
+        String expectedLanguage = config.getExpectedLanguage();
+        if (expectedLanguage != null) {
+            logger.info(String.format("detected %s: %s", expectedLanguage, page.getURL().toString()));
+            if (!this.langDetector.isLanguage(page, expectedLanguage)) {
+                return null;
+            }
+        } else {
+            // Too easy to forget, so...
+            throw new RuntimeException("This fork requires a specific expected language");
+        }
+
+	try {
             TargetRelevance relevance;
             if (targetClassifier != null) {
                 relevance = targetClassifier.classify(page);

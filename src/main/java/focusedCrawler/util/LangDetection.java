@@ -52,6 +52,10 @@ public class LangDetection {
      * @return true if the String contains English language, false otherwise
      */
     public Boolean isEnglish(String content) {
+        return isLanguage(content, "en");
+    }
+
+    public boolean isLanguage(String content, String lang) {
         try {
 
             if (content == null || content.isEmpty()) {
@@ -66,27 +70,28 @@ public class LangDetection {
                 return false;
             }
 
-            for (Language l : langs) {
-                if (l.lang.equals("en")) {
-                    return true;
-                }
+            if (langs.get(0).lang.equals(lang)) {
+                return true;
             }
+
             return false;
         } catch (Exception ex) {
             logger.warn("Problem while detecting language in text: " + content, ex);
             return false;
         }
+
     }
 
     /**
      * Try to detect the language of contents of the page.
      * 
      * @param page
+     * @param lang - two-letter lang code
      * @return true if the page is in English language, false otherwise
      */
-    public Boolean isEnglish(Page page) {
+    public Boolean isLanguage(Page page, String lang) {
         try {
-            return isEnglish(page.getParsedData().getCleanText());
+            return isLanguage(page.getParsedData().getCleanText(), lang);
         } catch (Exception e) {
             System.out.println("Exception in detect_page");
             return false;

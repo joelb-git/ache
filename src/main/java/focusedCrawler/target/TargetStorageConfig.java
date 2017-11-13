@@ -3,7 +3,9 @@ package focusedCrawler.target;
 import static java.util.Arrays.asList;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -61,6 +63,9 @@ public class TargetStorageConfig {
     @JsonProperty("target_storage.english_language_detection_enabled")
     private boolean englishLanguageDetectionEnabled = false;
 
+    @JsonProperty("target_storage.expected_language")
+    private String expectedLanguage;
+
     @JsonUnwrapped
     private KafkaConfig kafkaConfig;
 
@@ -110,6 +115,10 @@ public class TargetStorageConfig {
 
     public boolean isEnglishLanguageDetectionEnabled() {
         return englishLanguageDetectionEnabled;
+    }
+
+    public String getExpectedLanguage() {
+        return expectedLanguage;
     }
 
     public boolean getHashFileName() {
