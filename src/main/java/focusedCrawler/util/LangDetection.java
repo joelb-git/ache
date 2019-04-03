@@ -82,6 +82,27 @@ public class LangDetection {
 
     }
 
+    public String getLanguage(String content) {
+        try {
+            if (content == null || content.isEmpty()) {
+                return null;
+            }
+
+            Detector detector = DetectorFactory.create();
+            detector.append(content);
+            ArrayList<Language> langs = detector.getProbabilities();
+
+            if (langs.size() == 0) {
+                return null;
+            }
+	    return langs.get(0).lang;
+        } catch (Exception ex) {
+            logger.warn("Problem while detecting language in text: " + content, ex);
+            return null;
+        }
+
+    }
+
     /**
      * Try to detect the language of contents of the page.
      * 
@@ -95,6 +116,16 @@ public class LangDetection {
         } catch (Exception e) {
             System.out.println("Exception in detect_page");
             return false;
+        }
+    }
+
+    public String getLanguage(Page page) {
+        try {
+            String text = page.getParsedData().getCleanText();
+	    return this.getLanguage(text);
+        } catch (Exception e) {
+            System.out.println("Exception in detect_page");
+            return null;
         }
     }
 

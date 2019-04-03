@@ -61,7 +61,8 @@ public class TargetStorage {
         // non-html pages saved directly
         if (!page.isHtml()) {
             page.setTargetRelevance(TargetRelevance.IRRELEVANT);
-            targetRepository.insert(page);
+            //targetRepository.insert(page);
+	    logger.info("Ignoring non-html page: " + page.getURL().toString());
             monitor.countPage(page, false, 0.0d);
             return null;
         }
@@ -76,8 +77,9 @@ public class TargetStorage {
 
         String expectedLanguage = config.getExpectedLanguage();
         if (expectedLanguage != null) {
-            logger.info(String.format("detected %s: %s", expectedLanguage, page.getURL().toString()));
-            if (!this.langDetector.isLanguage(page, expectedLanguage)) {
+	    String detectedLanguage = this.langDetector.getLanguage(page);
+            logger.info(String.format("detected %s: %s", detectedLanguage, page.getURL().toString()));
+	    if (!detectedLanguage.equals(expectedLanguage)) {
                 return null;
             }
         } else {
