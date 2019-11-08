@@ -1,6 +1,7 @@
 package focusedCrawler.crawler.async;
 
 import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
 import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -8,9 +9,12 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -74,6 +78,8 @@ public class HttpDownloader implements Closeable {
     private Counter counterHttpStatus5xx;
     private Counter counterErrors;
 
+    private Set<String> seenUrls = new HashSet<>();
+
     public HttpDownloader() {
         this(new HttpDownloaderConfig(), null, new MetricsManager(false));
     }
@@ -119,6 +125,25 @@ public class HttpDownloader implements Closeable {
         }
 
         setupMetrics(metricsManager);
+
+        // hack to skip manual list of seen urls
+        String seenUrlsPath = System.getenv("ACHE_SEEN_URLS_PATH");
+        if (seenUrlsPath != null) {
+            logger.info("Loading seenUrls from: " + seenUrlsPath);
+            try (BufferedReader in = new BufferedReader(new InputStreamReader(
+                    new FileInputStream(seenUrlsPath), StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = in.readLine()) != null) {
+                    line = line.trim();
+                    seenUrls.add(line);
+                }
+                logger.info(String.format("Loaded %d seen urls", seenUrls.size()));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        } else {
+            logger.info("seenUrls not provided");
+        }
     }
 
     private void setupMetrics(MetricsManager metrics) {
@@ -268,6 +293,11 @@ public class HttpDownloader implements Closeable {
             BaseFetchException exception = null;
             FetchedResult result = null;
             String url = link.getURL().toString();
+
+            if (seenUrls.contains(url)) {
+                logger.warn("Skipping already seen url: " + url);
+                return null;
+            }
 
             final Timer.Context context = fetchTimer.time();
             try {
