@@ -79,12 +79,12 @@ public class TargetStorage {
         if (expectedLanguage != null) {
 	    String detectedLanguage = this.langDetector.getLanguage(page);
             logger.info(String.format("detected %s: %s", detectedLanguage, page.getURL().toString()));
-	    if (!detectedLanguage.equals(expectedLanguage)) {
+	    if (!expectedLanguage.equals("*") && !detectedLanguage.equals(expectedLanguage)) {
                 return null;
             }
         } else {
             // Too easy to forget, so...
-            throw new RuntimeException("This fork requires a specific expected language");
+            throw new RuntimeException("This fork requires a specific expected language; use '*' for all");
         }
 
 	try {
