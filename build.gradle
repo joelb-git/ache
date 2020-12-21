@@ -68,6 +68,10 @@ dependencies {
     // TODO fill these in from Maven Central instead of that local libs dir
     compile files('libs/jsonic-1.2.0.jar') // recommend updating this, it's for langdetect.jar
     compile files('libs/langdetect-03-03-2014.jar') // TODO why isn't this in maven central
+
+    // lingua, for kazakh language detection
+    // https://github.com/pemistahl/lingua
+    implementation 'com.github.pemistahl:lingua:1.0.3'
 }
 
 

@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,27 +26,27 @@ import focusedCrawler.target.repository.TargetRepository;
 import focusedCrawler.target.repository.WarcTargetRepository;
 import focusedCrawler.target.repository.elasticsearch.ElasticSearchConfig;
 import focusedCrawler.target.repository.kafka.KafkaTargetRepository;
-import focusedCrawler.util.LangDetection;
+import focusedCrawler.util.LinguaLangDetection;
 import focusedCrawler.util.MetricsManager;
 import focusedCrawler.util.StorageException;
 
 public class TargetStorage {
-	
+
 	public static final Logger logger = LoggerFactory.getLogger(TargetStorage.class);
 
     private TargetRepository targetRepository;
     private LinkStorage linkStorage;
     private TargetClassifier targetClassifier;
     private TargetStorageConfig config;
-    private LangDetection langDetector = new LangDetection();
+    private LinguaLangDetection langDetector = new LinguaLangDetection();
     private TargetStorageMonitor monitor;
-    
+
     public TargetStorage(TargetClassifier targetClassifier,
                          TargetRepository targetRepository, 
                          LinkStorage linkStorage,
                        	 TargetStorageMonitor monitor,
                        	 TargetStorageConfig config) {
-        
+
         this.targetClassifier = targetClassifier;
         this.targetRepository = targetRepository;
         this.linkStorage = linkStorage;
@@ -75,11 +76,11 @@ public class TargetStorage {
             }
         }
 
-        String expectedLanguage = config.getExpectedLanguage();
-        if (expectedLanguage != null) {
+        Set<String> expectedLanguages = config.getExpectedLanguages();
+        if (expectedLanguages != null) {
 	    String detectedLanguage = this.langDetector.getLanguage(page);
             logger.info(String.format("detected %s: %s", detectedLanguage, page.getURL().toString()));
-	    if (!expectedLanguage.equals("*") && !detectedLanguage.equals(expectedLanguage)) {
+	    if (!expectedLanguages.contains("*") && !expectedLanguages.contains(detectedLanguage)) {
                 return null;
             }
         } else {
@@ -100,7 +101,7 @@ public class TargetStorage {
             if (relevance.isRelevant() || config.isSaveNegativePages()) {
                 targetRepository.insert(page);
             }
-            
+
             if (relevance.isRelevant()) {
                 if (config.isBipartite()) {
                     // set the page is as authority if using backlinks
@@ -134,7 +135,7 @@ public class TargetStorage {
     public static TargetStorage create(String configPath, String modelPath, String dataPath,
             String esIndexName, String esTypeName, TargetStorageConfig config,
             LinkStorage linkStorage, MetricsManager metricsManager) throws IOException {
-        
+
         // if one wants to use a classifier
         TargetClassifier targetClassifier = null;
         if (modelPath != null && !modelPath.isEmpty()) {
@@ -172,7 +173,7 @@ public class TargetStorage {
 
     private static TargetRepository createRepository(String dataFormat, String dataPath,
             String esIndexName, String esTypeName, TargetStorageConfig config) throws IOException {
-        
+
         Path targetDirectory = Paths.get(dataPath, config.getTargetStorageDirectory());
         boolean compressData = config.getCompressData();
         boolean hashFilename = config.getHashFileName();
