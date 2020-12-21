@@ -247,6 +247,8 @@ public class FrontierManager {
                     if (inserted) {
                         logger.info("Added seed URL: {}", seed);
                         count++;
+                    } else {
+                        logger.info("Ignored seed URL: {}", seed);
                     }
                 } catch (FrontierPersistentException e) {
                     throw new RuntimeException("Failed to insert seed URL: " + seed, e);
