@@ -29,8 +29,9 @@ public class LangDetection implements ILangDetection {
     static {
         // If not supported, consider adding new profile.  See:
         //   https://github.com/shuyo/language-detection/blob/wiki/Tools.md#generate-language-profile
+        // TODO: grab list from resources, under `src/main/resources/profiles/` instead of hardcoded list
         String[] languages = {"af", "ar", "bg", "bn", "cs", "da", "de", "el", "en", "es", "et",
-                "fa", "fi", "fr", "gu", "he", "hi", "hr", "hu", "id", "it", "ja", "kn", "ko", "lt",
+                "fa", "fi", "fr", "gu", "he", "hi", "hr", "hu", "id", "it", "ja", "kn", "ko", "kk", "lt",
                 "lv", "mk", "ml", "mr", "ne", "nl", "no", "pa", "pl", "pt", "ro", "ru", "sk", "sl",
                 "so", "sq", "sv", "sw", "ta", "te", "th", "tl", "tr", "uk", "ur", "vi", "zh-cn",
                 "zh-tw"};
