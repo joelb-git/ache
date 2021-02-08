@@ -64,8 +64,15 @@ public class TargetStorageConfig {
     @JsonProperty("target_storage.english_language_detection_enabled")
     private boolean englishLanguageDetectionEnabled = false;
 
+    // default or lingua
+    @JsonProperty("target_storage.lang_detector_type")
+    private String langDetectorType;
+
     @JsonProperty("target_storage.expected_languages")
     private String expectedLanguages;
+
+    @JsonProperty("target_storage.expected_language")
+    private String expectedLanguage;
 
     @JsonUnwrapped
     private KafkaConfig kafkaConfig;
@@ -118,8 +125,27 @@ public class TargetStorageConfig {
         return englishLanguageDetectionEnabled;
     }
 
+    public String getLangDetectorType() {
+        if (langDetectorType == null) {
+            langDetectorType = "default";
+        }
+        if (!langDetectorType.equals("default") && !langDetectorType.equals("lingua")) {
+            throw new RuntimeException(String.format(
+                    "invalid lang_detector_type '%s': valid values: default, lingua", langDetectorType));
+        }
+        return langDetectorType;
+    }
+
     public Set<String> getExpectedLanguages() {
-	return new HashSet<String>(Arrays.asList(expectedLanguages.split(",")));
+        if (expectedLanguage != null && expectedLanguages != null) {
+            throw new RuntimeException("expectedLanguage and expectedLanguages cannot both be set");
+        } else if (expectedLanguage != null) {
+            expectedLanguages = expectedLanguage;
+        }
+        if (expectedLanguages == null) {
+            throw new RuntimeException("expectedLanguages must be set");
+        }
+        return new HashSet<String>(Arrays.asList(expectedLanguages.split(",")));
     }
 
     public boolean getHashFileName() {

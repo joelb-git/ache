@@ -1,9 +1,13 @@
 package focusedCrawler.util;
+
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,40 +18,48 @@ import com.cybozu.labs.langdetect.Language;
 
 import focusedCrawler.target.model.Page;
 
-public class LangDetection {
-    
+public class LangDetection implements ILangDetection {
+
     private static final Logger logger = LoggerFactory.getLogger(LangDetection.class);
-    
+
     /**
      *  Loads language profiles from resources folder
      */
+    private static final Set<String> supportedLanguages = new HashSet<>();
     static {
-        String[] languages = { "af", "ar", "bg", "bn", "cs", "da", "de", "el", "en", "es", "et",
+        // If not supported, consider adding new profile.  See:
+        //   https://github.com/shuyo/language-detection/blob/wiki/Tools.md#generate-language-profile
+        String[] languages = {"af", "ar", "bg", "bn", "cs", "da", "de", "el", "en", "es", "et",
                 "fa", "fi", "fr", "gu", "he", "hi", "hr", "hu", "id", "it", "ja", "kn", "ko", "lt",
-                "lv", "mk", "ml", "mr", "ne", "nl","no", "pa", "pl", "pt", "ro", "ru", "sk", "sl",
+                "lv", "mk", "ml", "mr", "ne", "nl", "no", "pa", "pl", "pt", "ro", "ru", "sk", "sl",
                 "so", "sq", "sv", "sw", "ta", "te", "th", "tl", "tr", "uk", "ur", "vi", "zh-cn",
-                "zh-tw" };
+                "zh-tw"};
+        supportedLanguages.addAll(Arrays.asList(languages));
         try {
             List<String> profiles = new ArrayList<String>();
-            
+
             for (String language : languages) {
-                String filename = "profiles/"+language;
+                String filename = "profiles/" + language;
                 InputStream is = LangDetection.class.getClassLoader().getResourceAsStream(filename);
                 BufferedReader br = new BufferedReader(new InputStreamReader(is, "UTF-8"));
                 String jsonProfile = br.readLine();
                 profiles.add(jsonProfile);
             }
-            
+
             DetectorFactory.loadProfile(profiles);
-            
+
         } catch (Exception e) {
             throw new IllegalStateException("Could not load language profiles.");
         }
     }
 
+    public boolean isSupported(String langCode) {
+        return LangDetection.supportedLanguages.contains(langCode);
+    }
+
     /**
      * Try to detect the language of the text in the String.
-     * 
+     *
      * @param page
      * @return true if the String contains English language, false otherwise
      */
@@ -95,7 +107,7 @@ public class LangDetection {
             if (langs.size() == 0) {
                 return null;
             }
-	    return langs.get(0).lang;
+            return langs.get(0).lang;
         } catch (Exception ex) {
             logger.warn("Problem while detecting language in text: " + content, ex);
             return null;
@@ -105,7 +117,7 @@ public class LangDetection {
 
     /**
      * Try to detect the language of contents of the page.
-     * 
+     *
      * @param page
      * @param lang - two-letter lang code
      * @return true if the page is in English language, false otherwise
@@ -122,7 +134,7 @@ public class LangDetection {
     public String getLanguage(Page page) {
         try {
             String text = page.getParsedData().getCleanText();
-	    return this.getLanguage(text);
+            return this.getLanguage(text);
         } catch (Exception e) {
             System.out.println("Exception in detect_page");
             return null;

@@ -26,32 +26,59 @@ import focusedCrawler.target.repository.TargetRepository;
 import focusedCrawler.target.repository.WarcTargetRepository;
 import focusedCrawler.target.repository.elasticsearch.ElasticSearchConfig;
 import focusedCrawler.target.repository.kafka.KafkaTargetRepository;
+import focusedCrawler.util.ILangDetection;
+import focusedCrawler.util.LangDetection;
 import focusedCrawler.util.LinguaLangDetection;
 import focusedCrawler.util.MetricsManager;
 import focusedCrawler.util.StorageException;
-
 public class TargetStorage {
 
-	public static final Logger logger = LoggerFactory.getLogger(TargetStorage.class);
+    public static final Logger logger = LoggerFactory.getLogger(TargetStorage.class);
 
     private TargetRepository targetRepository;
     private LinkStorage linkStorage;
     private TargetClassifier targetClassifier;
     private TargetStorageConfig config;
-    private LinguaLangDetection langDetector = new LinguaLangDetection();
+    private ILangDetection langDetector;
     private TargetStorageMonitor monitor;
 
     public TargetStorage(TargetClassifier targetClassifier,
-                         TargetRepository targetRepository, 
+                         TargetRepository targetRepository,
                          LinkStorage linkStorage,
-                       	 TargetStorageMonitor monitor,
-                       	 TargetStorageConfig config) {
+                         TargetStorageMonitor monitor,
+                         TargetStorageConfig config) {
 
         this.targetClassifier = targetClassifier;
         this.targetRepository = targetRepository;
         this.linkStorage = linkStorage;
         this.config = config;
         this.monitor = monitor;
+
+        String langDetectorType = this.config.getLangDetectorType();
+        if (langDetectorType == null) {
+            langDetectorType = "default";
+        }
+        if (langDetectorType.equals("default")) {
+            logger.info("Using default lang detector");
+            this.langDetector = new LangDetection();
+        } else if (langDetectorType.equals("lingua")) {
+            logger.info("Using lingua lang detector");
+            this.langDetector = new LinguaLangDetection();
+        } else {
+            throw new RuntimeException("invalid lang_detector_type");
+        }
+
+        Set<String> expectedLanguages = config.getExpectedLanguages();
+        if (expectedLanguages != null) {
+            for (String langCode : expectedLanguages) {
+                if (!langCode.equals("*") && !this.langDetector.isSupported(langCode)) {
+                    throw new RuntimeException(String.format("langCode %s not supported", langCode));
+                }
+            }
+        } else {
+            // Too easy to forget, so...
+            throw new RuntimeException("expected_language or expected_languages required");
+        }
     }
 
     /**
@@ -63,14 +90,14 @@ public class TargetStorage {
         if (!page.isHtml()) {
             page.setTargetRelevance(TargetRelevance.IRRELEVANT);
             //targetRepository.insert(page);
-	    logger.info("Ignoring non-html page: " + page.getURL().toString());
+            logger.info("Ignoring non-html page: " + page.getURL().toString());
             monitor.countPage(page, false, 0.0d);
             return null;
         }
 
         if (config.isEnglishLanguageDetectionEnabled()) {
             // Only accept English language
-            if (this.langDetector.isLanguage(page, "en") == false) {
+            if (!this.langDetector.isLanguage(page, "en")) {
                 logger.info("Ignoring non-English page: " + page.getURL().toString());
                 return null;
             }
@@ -78,9 +105,9 @@ public class TargetStorage {
 
         Set<String> expectedLanguages = config.getExpectedLanguages();
         if (expectedLanguages != null) {
-	    String detectedLanguage = this.langDetector.getLanguage(page);
+            String detectedLanguage = this.langDetector.getLanguage(page);
             logger.info(String.format("detected %s: %s", detectedLanguage, page.getURL().toString()));
-	    if (!expectedLanguages.contains("*") && !expectedLanguages.contains(detectedLanguage)) {
+            if (!expectedLanguages.contains("*") && !expectedLanguages.contains(detectedLanguage)) {
                 return null;
             }
         } else {
@@ -88,7 +115,7 @@ public class TargetStorage {
             throw new RuntimeException("This fork requires a specific expected language; use '*' for all");
         }
 
-	try {
+        try {
             TargetRelevance relevance;
             if (targetClassifier != null) {
                 relevance = targetClassifier.classify(page);
@@ -133,8 +160,8 @@ public class TargetStorage {
     }
 
     public static TargetStorage create(String configPath, String modelPath, String dataPath,
-            String esIndexName, String esTypeName, TargetStorageConfig config,
-            LinkStorage linkStorage, MetricsManager metricsManager) throws IOException {
+                                       String esIndexName, String esTypeName, TargetStorageConfig config,
+                                       LinkStorage linkStorage, MetricsManager metricsManager) throws IOException {
 
         // if one wants to use a classifier
         TargetClassifier targetClassifier = null;
@@ -162,17 +189,17 @@ public class TargetStorage {
         }
 
         TargetStorageMonitor monitor = null;
-        if(metricsManager != null) {
-        	monitor = new TargetStorageMonitor(dataPath, metricsManager);
-        }else {
-        	monitor = new TargetStorageMonitor(dataPath);
+        if (metricsManager != null) {
+            monitor = new TargetStorageMonitor(dataPath, metricsManager);
+        } else {
+            monitor = new TargetStorageMonitor(dataPath);
         }
 
         return new TargetStorage(targetClassifier, targetRepository, linkStorage, monitor, config);
     }
 
     private static TargetRepository createRepository(String dataFormat, String dataPath,
-            String esIndexName, String esTypeName, TargetStorageConfig config) throws IOException {
+                                                     String esIndexName, String esTypeName, TargetStorageConfig config) throws IOException {
 
         Path targetDirectory = Paths.get(dataPath, config.getTargetStorageDirectory());
         boolean compressData = config.getCompressData();
@@ -184,16 +211,16 @@ public class TargetStorage {
                 return new FilesTargetRepository(targetDirectory, config.getMaxFileSize());
             case "FILESYSTEM_JSON":
                 return new FileSystemTargetRepository(targetDirectory, DataFormat.JSON,
-                                                      hashFilename, compressData);
+                        hashFilename, compressData);
             case "FILESYSTEM_CBOR":
                 return new FileSystemTargetRepository(targetDirectory, DataFormat.CBOR,
-                                                      hashFilename, compressData);
+                        hashFilename, compressData);
             case "FILESYSTEM_HTML":
                 return new FileSystemTargetRepository(targetDirectory, DataFormat.HTML,
-                                                      hashFilename, compressData);
+                        hashFilename, compressData);
             case "WARC":
                 return new WarcTargetRepository(targetDirectory, config.getWarcMaxFileSize(),
-                                                config.getCompressWarc());
+                        config.getCompressWarc());
             case "KAFKA":
                 return new KafkaTargetRepository(config.getKafkaConfig());
             case "ELASTICSEARCH":
